@@ -43,7 +43,7 @@ interface KiroroProviderProps {
 }
 
 const KIRORO_MANAGED_PRIVY_ID = "cm5s8zw0n00v1v7q6l7q6l7q6"; // Kiroro's Master Privy ID
-const DEFAULT_BACKEND = "http://localhost:3001"; // Fallback for local testing
+const DEFAULT_BACKEND = "https://app.kiroro.xyz"; // Production API endpoint
 
 function KiroroInternalProvider({ children, config }: { children: React.ReactNode, config: KiroroProviderProps['config'] }) {
     const { login, logout, authenticated, user: privyUser, ready: privyReady } = usePrivy();
