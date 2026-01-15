@@ -1,0 +1,46 @@
+{
+    "name": "@kirorolabs/sdk",
+    "version": "1.0.0",
+    "description": "KiroroLabs Social-Native Auth & Gasless SDK for Threads + Base",
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsdx build",
+        "watch": "tsdx watch",
+        "lint": "tsdx lint",
+        "test": "tsdx test"
+    },
+    "keywords": [
+        "threads",
+        "auth",
+        "privy",
+        "gasless",
+        "base",
+        "web3",
+        "social"
+    ],
+    "author": "KiroroLabs",
+    "license": "MIT",
+    "dependencies": {
+        "@privy-io/react-auth": "^1.93.0",
+        "framer-motion": "^11.0.0",
+        "lucide-react": "^0.344.0"
+    },
+    "peerDependencies": {
+        "react": ">=18",
+        "react-dom": ">=18"
+    },
+    "devDependencies": {
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "tsdx": "^0.14.1",
+        "tslib": "^2.6.2",
+        "typescript": "^5.3.3"
+    }
+}
