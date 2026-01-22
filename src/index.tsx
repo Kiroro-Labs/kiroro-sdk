@@ -1,30 +1,30 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
 import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
 import { base } from "viem/chains";
+import { ThreadsAuthProvider, useThreadsAuth } from "./threads-auth";
+import type {
+    KiroroUser,
+    KiroroConfig,
+    KiroroAuthContextType,
+    ValidateKeyResponse
+} from "./types";
 
-interface KiroroUser {
-    id: string;
-    username: string;
-    picture: string;
-    walletAddress?: string;
-}
+// Re-export types for consumers
+export type { KiroroUser, KiroroConfig, KiroroAuthContextType } from "./types";
 
-interface KiroroAuthContextType {
-    user: KiroroUser | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    isValidated: boolean;
-    error: string | null;
-    login: () => void;
-    logout: () => void;
-}
+// Constants
+const DEFAULT_BACKEND = "https://app.kiroro.xyz";
+const DEFAULT_PRIVY_APP_ID = "clz5r7z0n00v1v7q6worlx8mk"; // Kiroro's managed Privy App
 
 const KiroroAuthContext = createContext<KiroroAuthContextType | null>(null);
 
-export function useKiroroAuth() {
+/**
+ * Hook to access Kiroro authentication state and methods
+ */
+export function useKiroroAuth(): KiroroAuthContextType {
     const context = useContext(KiroroAuthContext);
     if (!context) {
         throw new Error("useKiroroAuth must be used within KiroroProvider");
@@ -34,45 +34,68 @@ export function useKiroroAuth() {
 
 interface KiroroProviderProps {
     children: React.ReactNode;
-    config: {
-        kiroroClientId: string; // The API Key from dashboard
-        privyAppId?: string;    // Optional: for custom white-label mode
-        backendUrl?: string;    // Optional: override API endpoint
-        gasless?: boolean;
-    };
+    config: KiroroConfig;
 }
 
-const KIRORO_MANAGED_PRIVY_ID = "cm5s8zw0n00v1v7q6l7q6l7q6"; // Kiroro's Master Privy ID
-const DEFAULT_BACKEND = "https://app.kiroro.xyz"; // Production API endpoint
+/**
+ * Internal provider that combines Threads auth with Privy wallets
+ */
+function KiroroInternalProvider({
+    children,
+    config
+}: {
+    children: React.ReactNode;
+    config: KiroroConfig;
+}) {
+    const { user: privyUser, ready: privyReady, createWallet } = usePrivy();
+    const {
+        user: threadsUser,
+        isLoading: threadsLoading,
+        error: threadsError,
+        initiateThreadsLogin,
+        logout: threadsLogout,
+        getAccessToken
+    } = useThreadsAuth();
 
-function KiroroInternalProvider({ children, config }: { children: React.ReactNode, config: KiroroProviderProps['config'] }) {
-    const { login, logout, authenticated, user: privyUser, ready: privyReady } = usePrivy();
     const [user, setUser] = useState<KiroroUser | null>(null);
     const [isValidated, setIsValidated] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [validating, setValidating] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [projectName, setProjectName] = useState<string | null>(null);
+    const [tier, setTier] = useState<string | null>(null);
 
+    const backendUrl = config.backendUrl || DEFAULT_BACKEND;
+
+    // Validate API key on mount
     useEffect(() => {
         const validateKey = async () => {
+            if (!config.kiroroClientId) {
+                setError("kiroroClientId is required");
+                setValidating(false);
+                return;
+            }
+
             try {
-                const response = await fetch(`${config.backendUrl || DEFAULT_BACKEND}/api/validate-key`, {
+                const response = await fetch(`${backendUrl}/api/validate-key`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ apiKey: config.kiroroClientId }),
                 });
 
-                const data = await response.json();
+                const data: ValidateKeyResponse = await response.json();
 
                 if (response.ok && data.valid) {
                     setIsValidated(true);
-                    console.log(`[Kiroro] Successfully connected to ${data.projectName} (${data.tier} tier)`);
+                    setProjectName(data.projectName || null);
+                    setTier(data.tier || "starter");
+                    console.log(`[Kiroro] ✓ Connected to "${data.projectName}" (${data.tier} tier)`);
                 } else {
-                    setError(data.error || "Invalid Kiroro Client ID");
-                    console.error(`[Kiroro Error] ${data.error || "Invalid Client ID"}`);
+                    setError(data.error || "Invalid API Key");
+                    console.error(`[Kiroro] ✗ ${data.error || "Invalid Client ID"}`);
                 }
             } catch (err) {
-                console.warn("[Kiroro] Backend validation offline. Running in offline/dev mode.");
-                // For dev UX, we might allow it anyway with a warning
+                // Allow offline/dev mode with warning
+                console.warn("[Kiroro] Backend unreachable. Running in offline mode.");
                 setIsValidated(true);
             } finally {
                 setValidating(false);
@@ -80,71 +103,170 @@ function KiroroInternalProvider({ children, config }: { children: React.ReactNod
         };
 
         validateKey();
-    }, [config.kiroroClientId, config.backendUrl]);
+    }, [config.kiroroClientId, backendUrl]);
 
+    // Sync Threads user with Privy embedded wallet
     useEffect(() => {
-        if (privyReady && authenticated && privyUser) {
+        if (threadsUser && privyReady) {
+            const walletAddress = privyUser?.wallet?.address;
+
             setUser({
-                id: privyUser.id,
-                username: "threads_user",
-                picture: "https://threads.net/avatar.png",
-                walletAddress: privyUser.wallet?.address
+                id: threadsUser.id,
+                threadsId: threadsUser.threadsId,
+                username: threadsUser.username,
+                picture: threadsUser.picture,
+                walletAddress,
+                isVerified: threadsUser.isVerified,
             });
-        } else {
+
+            // Create embedded wallet if user doesn't have one
+            if (!walletAddress && typeof createWallet === 'function') {
+                createWallet().catch(console.error);
+            }
+        } else if (!threadsUser) {
             setUser(null);
         }
-    }, [privyReady, authenticated, privyUser]);
+    }, [threadsUser, privyReady, privyUser, createWallet]);
 
-    const handleLogin = () => {
+    // Update wallet address when Privy user changes
+    useEffect(() => {
+        if (user && privyUser?.wallet?.address && user.walletAddress !== privyUser.wallet.address) {
+            setUser(prev => prev ? { ...prev, walletAddress: privyUser.wallet?.address } : null);
+        }
+    }, [privyUser?.wallet?.address, user]);
+
+    /**
+     * Initiate login flow
+     */
+    const login = useCallback(() => {
         if (!isValidated && !validating) {
-            alert(`Kiroro SDK Error: ${error || "Invalid API Key"}`);
+            console.error(`[Kiroro] Cannot login: ${error || "Invalid API Key"}`);
             return;
         }
-        login();
-    };
+        initiateThreadsLogin(config.kiroroClientId, backendUrl);
+    }, [isValidated, validating, error, initiateThreadsLogin, config.kiroroClientId, backendUrl]);
+
+    /**
+     * Logout
+     */
+    const logout = useCallback(() => {
+        threadsLogout();
+        setUser(null);
+    }, [threadsLogout]);
+
+    const isLoading = !privyReady || validating || threadsLoading;
 
     return (
-        <KiroroAuthContext.Provider value={{
-            user,
-            isAuthenticated: authenticated,
-            isLoading: (!privyReady || validating),
-            isValidated,
-            error,
-            login: handleLogin,
-            logout
-        }}>
+        <KiroroAuthContext.Provider
+            value={{
+                user,
+                isAuthenticated: !!user,
+                isLoading,
+                isValidated,
+                error: error || threadsError,
+                projectName,
+                tier,
+                login,
+                logout,
+                getAccessToken,
+            }}
+        >
             {children}
         </KiroroAuthContext.Provider>
     );
 }
 
+/**
+ * Main Kiroro Provider - wrap your app with this
+ * 
+ * @example
+ * ```tsx
+ * import { KiroroProvider } from "@kirorolabs/sdk";
+ * 
+ * function App() {
+ *   return (
+ *     <KiroroProvider config={{ kiroroClientId: "kiro_abc123..." }}>
+ *       <YourApp />
+ *     </KiroroProvider>
+ *   );
+ * }
+ * ```
+ */
 export function KiroroProvider({ children, config }: KiroroProviderProps) {
-    const appId = config.privyAppId || KIRORO_MANAGED_PRIVY_ID;
+    const privyAppId = config.privyAppId || DEFAULT_PRIVY_APP_ID;
+    const backendUrl = config.backendUrl || DEFAULT_BACKEND;
+    const theme = config.appearance?.theme || "dark";
+    const accentColor = config.appearance?.accentColor || "#2563EB";
 
     return (
         <PrivyProvider
-            appId={appId}
+            appId={privyAppId}
             config={{
-                loginMethods: ["wallet", "email", "sms"],
+                loginMethods: ["wallet"], // Wallet only since Threads is our primary
                 appearance: {
-                    theme: "dark",
-                    accentColor: "#2563EB",
-                    showWalletLoginFirst: false,
+                    theme,
+                    logo: config.appearance?.logo,
                 },
                 embeddedWallets: {
-                    ethereum: {
-                        createOnLogin: "users-without-wallets",
-                    },
+                    createOnLogin: "users-without-wallets",
                 },
                 defaultChain: base,
                 supportedChains: [base],
             }}
         >
             <SmartWalletsProvider>
-                <KiroroInternalProvider config={config}>
-                    {children}
-                </KiroroInternalProvider>
+                <ThreadsAuthProvider backendUrl={backendUrl}>
+                    <KiroroInternalProvider config={config}>
+                        {children}
+                    </KiroroInternalProvider>
+                </ThreadsAuthProvider>
             </SmartWalletsProvider>
         </PrivyProvider>
+    );
+}
+
+/**
+ * Pre-built Connect Button component
+ */
+export function KiroroConnectButton({
+    className = "",
+    children
+}: {
+    className?: string;
+    children?: React.ReactNode;
+}) {
+    const { user, isAuthenticated, isLoading, login, logout } = useKiroroAuth();
+
+    if (isLoading) {
+        return (
+            <button
+                disabled
+                className={`kiroro-btn kiroro-btn-loading ${className}`}
+            >
+                Loading...
+            </button>
+        );
+    }
+
+    if (isAuthenticated && user) {
+        return (
+            <div className={`kiroro-user ${className}`}>
+                <img
+                    src={user.picture}
+                    alt={user.username}
+                    className="kiroro-avatar"
+                />
+                <span className="kiroro-username">@{user.username}</span>
+                <button onClick={logout} className="kiroro-btn kiroro-btn-logout">
+                    Logout
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <button onClick={login} className={`kiroro-btn kiroro-btn-connect ${className}`}>
+            {children || "Connect with Threads"}
+        </button>
     );
 }

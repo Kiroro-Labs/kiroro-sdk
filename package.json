@@ -1,18 +1,25 @@
 {
     "name": "@kirorolabs/sdk",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "KiroroLabs Social-Native Auth & Gasless SDK for Threads + Base",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
     "files": [
         "dist"
     ],
     "scripts": {
-        "build": "tsdx build",
-        "watch": "tsdx watch",
-        "lint": "tsdx lint",
-        "test": "tsdx test"
+        "build": "tsup src/index.tsx --format cjs,esm --dts --external react --external react-dom",
+        "watch": "tsup src/index.tsx --format cjs,esm --dts --external react --external react-dom --watch",
+        "lint": "eslint src",
+        "prepublishOnly": "npm run build"
     },
     "keywords": [
         "threads",
@@ -21,26 +28,32 @@
         "gasless",
         "base",
         "web3",
-        "social"
+        "social",
+        "kiroro",
+        "embedded-wallet"
     ],
-    "author": "KiroroLabs",
+    "author": "Kiroro Labs",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Kiroro-Labs/kiroro-sdk"
+    },
+    "homepage": "https://kiroro.xyz",
     "dependencies": {
-        "@privy-io/react-auth": "^1.93.0",
-        "framer-motion": "^11.0.0",
-        "lucide-react": "^0.344.0"
+        "@privy-io/react-auth": "^1.93.0"
     },
     "peerDependencies": {
         "react": ">=18",
-        "react-dom": ">=18"
+        "react-dom": ">=18",
+        "viem": ">=2.0.0"
     },
     "devDependencies": {
         "@types/react": "^18.2.0",
         "@types/react-dom": "^18.2.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
-        "tsdx": "^0.14.1",
-        "tslib": "^2.6.2",
-        "typescript": "^5.3.3"
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.3",
+        "viem": "^2.0.0"
     }
 }
