@@ -47,7 +47,7 @@ function KiroroInternalProvider({
     children: React.ReactNode;
     config: KiroroConfig;
 }) {
-    const { user: privyUser, ready: privyReady, createWallet, loginWithCustomAccessToken } = usePrivy() as any;
+    const { user: privyUser, ready: privyReady, createWallet } = usePrivy();
     const {
         user: threadsUser,
         accessToken: threadsToken,
@@ -106,20 +106,6 @@ function KiroroInternalProvider({
         validateKey();
     }, [config.kiroroClientId, backendUrl]);
 
-    // 1. Bridge Threads Auth -> Privy Auth
-    useEffect(() => {
-        const syncAuth = async () => {
-            if (threadsToken && privyReady && !privyUser) {
-                try {
-                    console.log("[Kiroro] Syncing Threads session with Privy...");
-                    await loginWithCustomAccessToken(threadsToken);
-                } catch (e) {
-                    console.error("[Kiroro] Privy Auth Failed:", e);
-                }
-            }
-        };
-        syncAuth();
-    }, [threadsToken, privyReady, privyUser, loginWithCustomAccessToken]);
 
     // 2. Manage Wallet & User State
     useEffect(() => {
@@ -213,16 +199,27 @@ function KiroroInternalProvider({
  * ```
  */
 export function KiroroProvider({ children, config }: KiroroProviderProps) {
-    const privyAppId = config.privyAppId || DEFAULT_PRIVY_APP_ID;
     const backendUrl = config.backendUrl || DEFAULT_BACKEND;
+
+    return (
+        <ThreadsAuthProvider backendUrl={backendUrl}>
+            <PrivyWrapper config={config}>
+                {children}
+            </PrivyWrapper>
+        </ThreadsAuthProvider>
+    );
+}
+
+function PrivyWrapper({ children, config }: { children: React.ReactNode; config: KiroroConfig }) {
+    const privyAppId = config.privyAppId || DEFAULT_PRIVY_APP_ID;
     const theme = config.appearance?.theme || "dark";
-    const accentColor = config.appearance?.accentColor || "#2563EB";
+    const { getAccessToken, isLoading: isThreadsLoading } = useThreadsAuth();
 
     return (
         <PrivyProvider
             appId={privyAppId}
             config={{
-                loginMethods: ["wallet"], // Wallet only since Threads is our primary
+                loginMethods: ["wallet"],
                 appearance: {
                     theme,
                     logo: config.appearance?.logo,
@@ -232,14 +229,20 @@ export function KiroroProvider({ children, config }: KiroroProviderProps) {
                 },
                 defaultChain: base,
                 supportedChains: [base],
+                customAuth: {
+                    enabled: true,
+                    isLoading: isThreadsLoading,
+                    getCustomAccessToken: async () => {
+                        const token = await getAccessToken();
+                        return token || undefined;
+                    }
+                }
             }}
         >
             <SmartWalletsProvider>
-                <ThreadsAuthProvider backendUrl={backendUrl}>
-                    <KiroroInternalProvider config={config}>
-                        {children}
-                    </KiroroInternalProvider>
-                </ThreadsAuthProvider>
+                <KiroroInternalProvider config={config}>
+                    {children}
+                </KiroroInternalProvider>
             </SmartWalletsProvider>
         </PrivyProvider>
     );

@@ -1,6 +1,6 @@
 {
     "name": "@kirorolabs/sdk",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "description": "KiroroLabs Social-Native Auth & Gasless SDK for Threads + Base",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
