@@ -1,0 +1,59 @@
+{
+    "name": "@kirorolabs/sdk",
+    "version": "1.0.7",
+    "description": "KiroroLabs Social-Native Auth & Gasless SDK for Threads + Base",
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup src/index.tsx --format cjs,esm --dts --external react --external react-dom",
+        "watch": "tsup src/index.tsx --format cjs,esm --dts --external react --external react-dom --watch",
+        "lint": "eslint src",
+        "prepublishOnly": "npm run build"
+    },
+    "keywords": [
+        "threads",
+        "auth",
+        "privy",
+        "gasless",
+        "base",
+        "web3",
+        "social",
+        "kiroro",
+        "embedded-wallet"
+    ],
+    "author": "Kiroro Labs",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Kiroro-Labs/kiroro-sdk"
+    },
+    "homepage": "https://kiroro.xyz",
+    "dependencies": {
+        "@privy-io/react-auth": "^1.93.0"
+    },
+    "peerDependencies": {
+        "react": ">=18",
+        "react-dom": ">=18",
+        "viem": ">=2.0.0"
+    },
+    "devDependencies": {
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.3",
+        "viem": "^2.0.0"
+    }
+}
