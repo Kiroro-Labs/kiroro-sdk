@@ -2,21 +2,27 @@
 
 # Kiroro SDK 🛡️💎
 
-The Social-Native Auth & Gasless SDK for dApps. Onboard users with their **Threads** account and give them an embedded wallet on **Base** - all with zero friction.
+The Social-Native Web3 SDK for dApps. Connect users with **Threads** accounts, give them embedded smart wallets, and enable full blockchain transactions across multiple chains.
+
+[![npm version](https://img.shields.io/npm/v/@kirorolabs/sdk.svg)](https://www.npmjs.com/package/@kirorolabs/sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ## Features ✨
 
 - **Threads Authentication**: Native OAuth login via Threads (Meta)
-- **Embedded Wallets**: Automatic smart wallet creation for every user
-- **Gasless Transactions**: Integrated Paymaster support to sponsor gas
-- **SaaS Managed**: API keys, domain whitelists, and user analytics via the [Kiroro Dashboard](https://app.kiroro.xyz/dashboard)
+- **Embedded Wallets**: Automatic ERC-4337 smart wallet creation
+- **Full Transaction Support**: sendTransaction, writeContract, signMessage, signTypedData
+- **Multi-Chain**: Base, Arbitrum, Optimism, Polygon, Ethereum
+- **Wagmi Integration**: Works with standard Wagmi hooks
+- **Helper Hooks**: useKiroroToken (ERC-20), useKiroroNFT (ERC-721)
+- **Gasless Transactions**: Integrated Paymaster support
 
 ## Installation 📦
 
 ```bash
-npm install @kirorolabs/sdk viem @privy-io/react-auth
+npm install @kirorolabs/sdk viem
 # or
-yarn add @kirorolabs/sdk viem @privy-io/react-auth
+yarn add @kirorolabs/sdk viem
 ```
 
 ## Quick Start 🚀
@@ -39,40 +45,141 @@ function App() {
 }
 ```
 
-### 3. Add Login Button
+### 3. Use the Hooks
 
 ```tsx
-import { useKiroroAuth } from '@kirorolabs/sdk';
+import { useKiroroAuth, useKiroroWallet } from '@kirorolabs/sdk';
 
-function LoginButton() {
-  const { user, isAuthenticated, isLoading, login, logout } = useKiroroAuth();
+function MyComponent() {
+  // Authentication
+  const { user, isAuthenticated, login, logout } = useKiroroAuth();
+  
+  // Wallet & Transactions
+  const { sendTransaction, writeContract, signMessage, isReady } = useKiroroWallet();
 
-  if (isLoading) {
-    return <button disabled>Loading...</button>;
+  const handleSend = async () => {
+    const hash = await sendTransaction({
+      to: "0x1234...",
+      value: BigInt(1e16), // 0.01 ETH
+    });
+    console.log("Transaction:", hash);
+  };
+
+  if (!isAuthenticated) {
+    return <button onClick={login}>Connect with Threads</button>;
   }
 
-  if (isAuthenticated && user) {
-    return (
-      <div>
-        <img src={user.picture} alt={user.username} />
-        <p>Welcome, @{user.username}!</p>
-        <p>Wallet: {user.walletAddress}</p>
-        <button onClick={logout}>Logout</button>
-      </div>
-    );
-  }
-
-  return <button onClick={login}>Connect with Threads</button>;
+  return (
+    <div>
+      <p>Welcome, @{user.username}!</p>
+      <button onClick={handleSend} disabled={!isReady}>Send ETH</button>
+    </div>
+  );
 }
 ```
 
-Or use the pre-built button:
+## Hooks API 🪝
 
-```tsx
-import { KiroroConnectButton } from '@kirorolabs/sdk';
+### useKiroroAuth
 
-function Nav() {
-  return <KiroroConnectButton />;
+```typescript
+const {
+  user,              // KiroroUser | null
+  isAuthenticated,   // boolean
+  isLoading,         // boolean
+  login,             // () => void
+  logout,            // () => void
+  getAccessToken,    // () => Promise<string | null>
+} = useKiroroAuth();
+```
+
+### useKiroroWallet
+
+```typescript
+const {
+  address,           // Primary wallet address
+  smartWalletAddress,// ERC-4337 smart wallet
+  isReady,           // Ready for transactions
+  chainId,           // Current chain
+  
+  // Transactions
+  sendTransaction,   // (request) => Promise<hash>
+  writeContract,     // (request) => Promise<hash>
+  
+  // Signing
+  signMessage,       // (message) => Promise<signature>
+  signTypedData,     // (typedData) => Promise<signature>
+  
+  // Chain
+  switchChain,       // (chainId) => Promise<void>
+  waitForTransaction,// (hash) => Promise<receipt>
+} = useKiroroWallet();
+```
+
+### useKiroroToken
+
+```typescript
+import { useKiroroToken } from '@kirorolabs/sdk';
+
+const { balance, transfer, approve, allowance } = useKiroroToken("0xTokenAddress");
+
+// Transfer tokens
+await transfer("0xRecipient", BigInt(1e18));
+```
+
+### useKiroroNFT
+
+```typescript
+import { useKiroroNFT } from '@kirorolabs/sdk';
+
+const { balance, transfer, ownerOf } = useKiroroNFT("0xNFTContract");
+
+// Transfer an NFT
+await transfer("0xRecipient", BigInt(tokenId));
+```
+
+## Wagmi Integration
+
+```typescript
+import { kiroroWagmiConnector } from '@kirorolabs/sdk/wagmi';
+import { createConfig } from 'wagmi';
+
+const config = createConfig({
+  connectors: [kiroroWagmiConnector()],
+  // ... rest of wagmi config
+});
+
+// Now standard Wagmi hooks work with Kiroro!
+// useWriteContract(), useSendTransaction(), etc.
+```
+
+## Types
+
+```typescript
+interface KiroroUser {
+  id: string;
+  threadsId: string;
+  username: string;
+  picture: string;
+  walletAddress?: string;
+  smartWalletAddress?: string;
+  eoaAddress?: string;
+  chainId?: number;
+  isVerified?: boolean;
+}
+
+interface SendTransactionRequest {
+  to: `0x${string}`;
+  value?: bigint;
+  data?: `0x${string}`;
+}
+
+interface WriteContractRequest<TAbi> {
+  address: `0x${string}`;
+  abi: TAbi;
+  functionName: string;
+  args?: readonly unknown[];
+  value?: bigint;
 }
 ```
 
@@ -81,63 +188,25 @@ function Nav() {
 | Option | Type | Description |
 | :--- | :--- | :--- |
 | `kiroroClientId` | `string` | **Required**. Your API key from the dashboard |
-| `gasless` | `boolean` | Enable sponsored transactions (Pro/Scale plans) |
+| `gasless` | `boolean` | Enable sponsored transactions |
+| `chains` | `Chain[]` | Supported chains (defaults to Base) |
+| `defaultChain` | `Chain` | Default chain |
 | `appearance.theme` | `"dark" \| "light"` | Theme for auth modal |
 | `appearance.logo` | `string` | Custom logo URL |
-| `backendUrl` | `string` | Override backend (default: `https://app.kiroro.xyz`) |
-| `privyAppId` | `string` | Custom Privy App ID for white-label mode |
 
-## User Object 👤
+## Supported Chains 🌐
 
-```typescript
-interface KiroroUser {
-  id: string;
-  threadsId: string;
-  username: string;       // e.g., "john_doe"
-  picture: string;        // Profile picture URL
-  walletAddress?: string; // Embedded wallet on Base
-  isVerified?: boolean;   // Threads verification status
-}
-```
-
-## Hook API 🪝
-
-```typescript
-const {
-  user,              // KiroroUser | null
-  isAuthenticated,   // boolean
-  isLoading,         // boolean
-  isValidated,       // API key validation status
-  error,             // string | null
-  projectName,       // Your project name from dashboard
-  tier,              // "starter" | "pro" | "scale" | "enterprise"
-  login,             // () => void - Opens Threads login
-  logout,            // () => void
-  getAccessToken,    // () => Promise<string | null>
-} = useKiroroAuth();
-```
-
-## Fetching Data 📊
-
-You can use the `getAccessToken()` method to retrieve a valid Threads Access Token and fetch data directly from the Threads Graph API.
-
-```tsx
-const { getAccessToken } = useKiroroAuth();
-
-const fetchPosts = async () => {
-  const token = await getAccessToken();
-  if (!token) return;
-
-  const response = await fetch(`https://graph.threads.net/v1.0/me/threads?access_token=${token}`);
-  const data = await response.json();
-  console.log("User Posts:", data);
-};
-```
+- Base (default)
+- Base Sepolia
+- Arbitrum
+- Optimism
+- Polygon
+- Ethereum Mainnet
 
 ## Security 🔒
 
 - **Domain Whitelisting**: Only approved domains can use your API key
-- **CORS Protection**: Backend validates origin headers
+- **ERC-4337 Smart Wallets**: Secure account abstraction
 - **Session Tokens**: Secure, short-lived auth tokens
 
 ## Dashboard
@@ -148,7 +217,8 @@ Manage your projects, view SDK users, and monitor usage at:
 ## Requirements
 
 - React 18+
-- Only supports **Base Mainnet**
+- viem 2.0+
+- wagmi 2.0+ (optional, for Wagmi integration)
 
 ## License 📄
 
