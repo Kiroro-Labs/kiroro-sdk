@@ -7,6 +7,7 @@ import {
     createPublicClient,
     http,
     erc20Abi,
+    isAddress,
 } from "viem";
 import { base } from "viem/chains";
 import { useKiroroWallet, SUPPORTED_CHAINS } from "../wallet";
@@ -31,6 +32,11 @@ import { useKiroroWallet, SUPPORTED_CHAINS } from "../wallet";
  * ```
  */
 export function useKiroroToken(tokenAddress: `0x${string}`) {
+    // SECURITY: Validate token address
+    if (!isAddress(tokenAddress)) {
+        throw new Error(`[Kiroro] Invalid token address: ${tokenAddress}`);
+    }
+
     const { address, chainId, writeContract, isReady } = useKiroroWallet();
     const [balance, setBalance] = useState<bigint | undefined>();
     const [isLoading, setIsLoading] = useState(false);

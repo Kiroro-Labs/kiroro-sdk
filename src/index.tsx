@@ -36,7 +36,8 @@ export {
 
 // Constants
 const DEFAULT_BACKEND = "https://app.kiroro.xyz";
-const DEFAULT_PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cmk2ylfti000jjj0drm8hn5d2"; // Kiroro's managed Privy App
+const DEFAULT_PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cmk2ylfti000jjj0drm8hn5d2";
+const IS_DEV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
 
 const KiroroAuthContext = createContext<KiroroAuthContextType | null>(null);
 
@@ -108,15 +109,16 @@ function KiroroInternalProvider({
                     setIsValidated(true);
                     setProjectName(data.projectName || null);
                     setTier(data.tier || "starter");
-                    console.log(`[Kiroro] ✓ Connected to "${data.projectName}" (${data.tier} tier)`);
+                    if (IS_DEV) console.log(`[Kiroro] ✓ Connected to "${data.projectName}" (${data.tier} tier)`);
                 } else {
                     setError(data.error || "Invalid API Key");
                     console.error(`[Kiroro] ✗ ${data.error || "Invalid Client ID"}`);
                 }
             } catch (err) {
-                // Allow offline/dev mode with warning
-                console.warn("[Kiroro] Backend unreachable. Running in offline mode.");
-                setIsValidated(true);
+                // SECURITY: Do NOT default to validated when backend is unreachable
+                console.error("[Kiroro] Backend unreachable. Cannot validate API key.");
+                setError("Cannot validate API key - please check your network connection");
+                setIsValidated(false);
             } finally {
                 setValidating(false);
             }

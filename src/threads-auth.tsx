@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import type { KiroroUser, ThreadsOAuthState, ThreadsAuthResponse } from "./types";
 
 const KIRORO_BACKEND = "https://app.kiroro.xyz";
+const ALLOWED_BACKENDS = ["https://app.kiroro.xyz", "https://staging.kiroro.xyz", "http://localhost:3000"];
+const IS_DEV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
 
 interface ThreadsAuthContextType {
     isLoading: boolean;
@@ -55,11 +57,11 @@ export function ThreadsAuthProvider({ children, backendUrl = KIRORO_BACKEND }: T
                 if (session.expiresAt > Date.now() + 5 * 60 * 1000) {
                     setUser(session.user);
                     setAccessToken(session.accessToken);
-                    console.log("[Kiroro] Restored session for", session.user.username);
+                    if (IS_DEV) console.log("[Kiroro] Restored session for", session.user.username);
                 } else {
                     // Session expired, clear it
                     localStorage.removeItem(STORAGE_KEY);
-                    console.log("[Kiroro] Session expired, cleared");
+                    if (IS_DEV) console.log("[Kiroro] Session expired, cleared");
                 }
             }
         } catch (e) {
@@ -73,6 +75,12 @@ export function ThreadsAuthProvider({ children, backendUrl = KIRORO_BACKEND }: T
      */
     const initiateThreadsLogin = useCallback((clientId: string, customBackendUrl?: string) => {
         const backend = customBackendUrl || backendUrl;
+
+        // SECURITY: Warn if using untrusted backend
+        if (!ALLOWED_BACKENDS.some(allowed => backend.startsWith(allowed))) {
+            console.warn("[Kiroro] Warning: Using custom backend URL. Ensure it is trusted:", backend);
+        }
+
         setIsLoading(true);
         setError(null);
 
@@ -201,7 +209,7 @@ export function ThreadsAuthProvider({ children, backendUrl = KIRORO_BACKEND }: T
         setUser(null);
         setAccessToken(null);
         setError(null);
-        console.log("[Kiroro] Logged out");
+        if (IS_DEV) console.log("[Kiroro] Logged out");
     }, []);
 
     /**

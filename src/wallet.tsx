@@ -10,6 +10,7 @@ import {
     encodeFunctionData,
     createPublicClient,
     http,
+    isAddress,
 } from "viem";
 import { base, baseSepolia, arbitrum, optimism, polygon, mainnet } from "viem/chains";
 import type {
@@ -28,6 +29,9 @@ const SUPPORTED_CHAINS = {
     [polygon.id]: polygon,
     [mainnet.id]: mainnet,
 } as const;
+
+// Only log in development
+const IS_DEV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
 
 /**
  * Hook to access Kiroro wallet transaction capabilities
@@ -83,7 +87,7 @@ export function useKiroroWallet(): KiroroWalletContextType {
                 throw new Error("[Kiroro] Wallet not ready. Please authenticate first.");
             }
 
-            console.log("[Kiroro] Sending transaction:", request);
+            if (IS_DEV) console.log("[Kiroro] Sending transaction:", request);
 
             const hash = await client.sendTransaction({
                 to: request.to,
@@ -93,7 +97,7 @@ export function useKiroroWallet(): KiroroWalletContextType {
                 account: client.account!,
             });
 
-            console.log("[Kiroro] Transaction sent:", hash);
+            if (IS_DEV) console.log("[Kiroro] Transaction sent:", hash);
             return hash;
         },
         [client]
@@ -108,7 +112,7 @@ export function useKiroroWallet(): KiroroWalletContextType {
                 throw new Error("[Kiroro] Wallet not ready. Please authenticate first.");
             }
 
-            console.log("[Kiroro] Writing contract:", request.functionName, "at", request.address);
+            if (IS_DEV) console.log("[Kiroro] Writing contract:", request.functionName, "at", request.address);
 
             // Encode the function call
             const data = encodeFunctionData({
@@ -125,7 +129,7 @@ export function useKiroroWallet(): KiroroWalletContextType {
                 account: client.account!,
             });
 
-            console.log("[Kiroro] Contract write sent:", hash);
+            if (IS_DEV) console.log("[Kiroro] Contract write sent:", hash);
             return hash;
         },
         [client]
@@ -140,7 +144,7 @@ export function useKiroroWallet(): KiroroWalletContextType {
                 throw new Error("[Kiroro] Wallet not ready. Please authenticate first.");
             }
 
-            console.log("[Kiroro] Signing message");
+            if (IS_DEV) console.log("[Kiroro] Signing message");
 
             // @ts-ignore - Privy smart wallet client has slightly different interface
             const signature = await client.signMessage({ message });
@@ -159,7 +163,7 @@ export function useKiroroWallet(): KiroroWalletContextType {
                 throw new Error("[Kiroro] Wallet not ready. Please authenticate first.");
             }
 
-            console.log("[Kiroro] Signing typed data");
+            if (IS_DEV) console.log("[Kiroro] Signing typed data");
 
             // @ts-ignore - Privy smart wallet client has slightly different interface
             const signature = await client.signTypedData(typedData as any);
@@ -183,7 +187,7 @@ export function useKiroroWallet(): KiroroWalletContextType {
                 throw new Error(`[Kiroro] Chain ${targetChainId} is not supported.`);
             }
 
-            console.log("[Kiroro] Switching to chain:", chain.name);
+            if (IS_DEV) console.log("[Kiroro] Switching to chain:", chain.name);
             await client.switchChain({ id: targetChainId });
         },
         [client]
@@ -201,11 +205,11 @@ export function useKiroroWallet(): KiroroWalletContextType {
                 transport: http(),
             });
 
-            console.log("[Kiroro] Waiting for transaction:", hash);
+            if (IS_DEV) console.log("[Kiroro] Waiting for transaction:", hash);
 
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-            console.log("[Kiroro] Transaction confirmed:", receipt.status);
+            if (IS_DEV) console.log("[Kiroro] Transaction confirmed:", receipt.status);
             return receipt;
         },
         [chainId]

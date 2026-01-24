@@ -1,6 +1,6 @@
 {
     "name": "@kirorolabs/sdk",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "description": "KiroroLabs Social-Native Auth & Web3 SDK for Threads + Multi-Chain",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
