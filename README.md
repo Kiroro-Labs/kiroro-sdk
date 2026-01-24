@@ -1,3 +1,5 @@
+<img width="1800" height="600" alt="kirorolabs-banner" src="https://github.com/user-attachments/assets/3bdf388d-2cca-4a4d-80de-189a3ef638c2" />
+
 # Kiroro SDK 🛡️💎
 
 The Social-Native Auth & Gasless SDK for dApps. Onboard users with their **Threads** account and give them an embedded wallet on **Base** - all with zero friction.
