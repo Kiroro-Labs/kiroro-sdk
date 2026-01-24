@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
 import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
-import { base } from "viem/chains";
+import { base, baseSepolia, arbitrum, optimism, polygon, mainnet } from "viem/chains";
 import { ThreadsAuthProvider, useThreadsAuth } from "./threads-auth";
 import type {
     KiroroUser,
@@ -13,7 +13,26 @@ import type {
 } from "./types";
 
 // Re-export types for consumers
-export type { KiroroUser, KiroroConfig, KiroroAuthContextType } from "./types";
+export type {
+    KiroroUser,
+    KiroroConfig,
+    KiroroAuthContextType,
+    KiroroWalletContextType,
+    SendTransactionRequest,
+    WriteContractRequest,
+    TypedDataDefinition,
+} from "./types";
+
+// Re-export wallet hook
+export { useKiroroWallet, SUPPORTED_CHAINS } from "./wallet";
+
+// Re-export helper hooks
+export {
+    useKiroroToken,
+    useKiroroNFT,
+    useKiroroClient,
+    useKiroroEvents,
+} from "./hooks";
 
 // Constants
 const DEFAULT_BACKEND = "https://app.kiroro.xyz";

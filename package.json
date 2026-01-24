@@ -1,7 +1,7 @@
 {
     "name": "@kirorolabs/sdk",
-    "version": "1.0.8",
-    "description": "KiroroLabs Social-Native Auth & Gasless SDK for Threads + Base",
+    "version": "2.0.0",
+    "description": "KiroroLabs Social-Native Auth & Web3 SDK for Threads + Multi-Chain",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
@@ -10,14 +10,20 @@
             "types": "./dist/index.d.ts",
             "import": "./dist/index.mjs",
             "require": "./dist/index.js"
+        },
+        "./wagmi": {
+            "types": "./dist/wagmi.d.ts",
+            "import": "./dist/wagmi.mjs",
+            "require": "./dist/wagmi.js"
         }
     },
     "files": [
         "dist"
     ],
     "scripts": {
-        "build": "tsup src/index.tsx --format cjs,esm --dts --external react --external react-dom",
-        "watch": "tsup src/index.tsx --format cjs,esm --dts --external react --external react-dom --watch",
+        "build": "tsup src/index.tsx src/wagmi.tsx --format cjs,esm --external react --external react-dom --external wagmi --external viem",
+        "build:dts": "tsup src/index.tsx src/wagmi.tsx --format cjs,esm --dts --external react --external react-dom --external wagmi --external viem",
+        "watch": "tsup src/index.tsx src/wagmi.tsx --format cjs,esm --dts --external react --external react-dom --external wagmi --external viem --watch",
         "lint": "eslint src",
         "prepublishOnly": "npm run build"
     },
@@ -30,7 +36,12 @@
         "web3",
         "social",
         "kiroro",
-        "embedded-wallet"
+        "embedded-wallet",
+        "wagmi",
+        "viem",
+        "smart-wallet",
+        "erc-4337",
+        "account-abstraction"
     ],
     "author": "Kiroro Labs",
     "license": "MIT",
@@ -40,12 +51,19 @@
     },
     "homepage": "https://kiroro.xyz",
     "dependencies": {
-        "@privy-io/react-auth": "^1.93.0"
+        "@privy-io/react-auth": "^1.93.0",
+        "@wagmi/core": "^2.0.0"
     },
     "peerDependencies": {
         "react": ">=18",
         "react-dom": ">=18",
-        "viem": ">=2.0.0"
+        "viem": ">=2.0.0",
+        "wagmi": ">=2.0.0"
+    },
+    "peerDependenciesMeta": {
+        "wagmi": {
+            "optional": true
+        }
     },
     "devDependencies": {
         "@types/react": "^18.2.0",
@@ -54,6 +72,7 @@
         "react-dom": "^18.2.0",
         "tsup": "^8.0.0",
         "typescript": "^5.3.3",
-        "viem": "^2.0.0"
+        "viem": "^2.0.0",
+        "wagmi": "^2.0.0"
     }
 }
