@@ -12,7 +12,8 @@ The Social-Native Web3 SDK for dApps. Connect users with **Threads** accounts, g
 - **Threads Authentication**: Native OAuth login via Threads (Meta)
 - **Embedded Wallets**: Automatic ERC-4337 smart wallet creation
 - **Full Transaction Support**: sendTransaction, writeContract, signMessage, signTypedData
-- **Multi-Chain**: Base, Arbitrum, Optimism, Polygon, Ethereum
+- **Multi-Chain**: Base, Arbitrum, Optimism, Polygon, Ethereum, Solana
+- **Solana Support**: Native Solana wallets and transactions
 - **Wagmi Integration**: Works with standard Wagmi hooks
 - **Helper Hooks**: useKiroroToken (ERC-20), useKiroroNFT (ERC-721)
 - **Gasless Transactions**: Integrated Paymaster support
@@ -20,7 +21,7 @@ The Social-Native Web3 SDK for dApps. Connect users with **Threads** accounts, g
 ## Installation 📦
 
 ```bash
-npm install @kirorolabs/sdk viem
+npm install @kirorolabs/sdk viem @solana/web3.js
 # or
 yarn add @kirorolabs/sdk viem
 ```
@@ -116,6 +117,20 @@ const {
 } = useKiroroWallet();
 ```
 
+### useKiroroSolana ☀️
+
+```typescript
+import { useKiroroSolana } from '@kirorolabs/sdk';
+
+const {
+  connect,           // () => Promise<void>
+  signMessage,       // (message) => Promise<signature>
+  sendTransaction,   // (tx, connection) => Promise<txid>
+  walletAddress,     // string | null
+  isConnected,       // boolean
+} = useKiroroSolana();
+```
+
 ### useKiroroToken
 
 ```typescript
@@ -162,6 +177,7 @@ interface KiroroUser {
   username: string;
   picture: string;
   walletAddress?: string;
+  solanaWalletAddress?: string;
   smartWalletAddress?: string;
   eoaAddress?: string;
   chainId?: number;
@@ -202,6 +218,7 @@ interface WriteContractRequest<TAbi> {
 - Optimism
 - Polygon
 - Ethereum Mainnet
+- Solana
 
 ## Security 🔒
 
