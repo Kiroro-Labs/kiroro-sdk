@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
 import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
+import { useSolanaWallets } from "@privy-io/react-auth/solana";
 import { base, baseSepolia, arbitrum, optimism, polygon, mainnet } from "viem/chains";
 import { ThreadsAuthProvider, useThreadsAuth } from "./threads-auth";
 import type {
@@ -33,6 +34,8 @@ export {
     useKiroroClient,
     useKiroroEvents,
 } from "./hooks";
+
+export { useKiroroSolana } from "./solana";
 
 // Constants
 const DEFAULT_BACKEND = "https://app.kiroro.xyz";
@@ -68,6 +71,7 @@ function KiroroInternalProvider({
     config: KiroroConfig;
 }) {
     const { user: privyUser, ready: privyReady, createWallet } = usePrivy();
+    const { wallets: solanaWallets } = useSolanaWallets();
     const {
         user: threadsUser,
         accessToken: threadsToken,
@@ -139,6 +143,7 @@ function KiroroInternalProvider({
                 username: threadsUser.username,
                 picture: threadsUser.picture,
                 walletAddress,
+                solanaWalletAddress: solanaWallets.find(w => w.walletClientType === 'privy')?.address || solanaWallets[0]?.address,
                 isVerified: threadsUser.isVerified,
             });
 
@@ -157,10 +162,44 @@ function KiroroInternalProvider({
 
     // Update wallet address when Privy user changes
     useEffect(() => {
-        if (user && privyUser?.wallet?.address && user.walletAddress !== privyUser.wallet.address) {
-            setUser(prev => prev ? { ...prev, walletAddress: privyUser.wallet?.address } : null);
+        if (user && privyUser?.wallet?.address) {
+            const newEthAddress = privyUser.wallet?.chainType === 'ethereum' ? privyUser.wallet.address : user.walletAddress;
+            const solanaWallet = solanaWallets.find(w => w.walletClientType === 'privy') || solanaWallets[0];
+            const newSolanaAddress = solanaWallet?.address; // Get address from solanaWallets
+
+            if (newEthAddress !== user.walletAddress || newSolanaAddress !== user.solanaWalletAddress) {
+                setUser(prev => prev ? {
+                    ...prev,
+                    walletAddress: newEthAddress,
+                    solanaWalletAddress: newSolanaAddress
+                } : null);
+
+                // Sync to backend
+                const syncToBackend = async () => {
+                    try {
+                        const token = await getAccessToken();
+                        if (!token) return;
+
+                        await fetch(`${backendUrl}/api/sync-wallets`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                walletAddress: newEthAddress,
+                                solanaWalletAddress: newSolanaAddress
+                            }),
+                        });
+                    } catch (err) {
+                        console.error("[Kiroro] Failed to sync wallets:", err);
+                    }
+                };
+
+                syncToBackend();
+            }
         }
-    }, [privyUser?.wallet?.address, user]);
+    }, [privyUser?.wallet?.address, solanaWallets, user?.id /* Using ID to ensure we have a base user */, getAccessToken, backendUrl]);
 
     /**
      * Initiate login flow
@@ -250,6 +289,7 @@ function PrivyWrapper({ children, config }: { children: React.ReactNode; config:
                 },
                 defaultChain: base,
                 supportedChains: [base],
+                solanaClusters: config.solanaClusters || [],
                 customAuth: {
                     enabled: true,
                     isLoading: isThreadsLoading,

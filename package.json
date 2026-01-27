@@ -52,6 +52,7 @@
     "homepage": "https://kiroro.xyz",
     "dependencies": {
         "@privy-io/react-auth": "^1.93.0",
+        "@solana/web3.js": "^1.98.4",
         "@wagmi/core": "^2.0.0"
     },
     "peerDependencies": {

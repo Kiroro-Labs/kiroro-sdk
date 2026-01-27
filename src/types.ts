@@ -23,6 +23,8 @@ export interface KiroroUser {
     eoaAddress?: string;
     /** Current chain ID */
     chainId?: number;
+    /** Solana wallet address if connected */
+    solanaWalletAddress?: string;
 }
 
 // ============================================
@@ -48,6 +50,8 @@ export interface KiroroConfig {
     chains?: Chain[];
     /** Default chain (defaults to Base) */
     defaultChain?: Chain;
+    /** Supported Solana clusters */
+    solanaClusters?: SolanaCluster[];
     /** Paymaster configuration for gasless transactions */
     paymaster?: {
         url: string;
@@ -171,6 +175,7 @@ export interface ValidateKeyResponse {
     limitExceeded?: boolean;
 }
 
+
 export interface ThreadsAuthResponse {
     success: boolean;
     /** The actual Threads Access Token (valid for ~60 days) to be used for data fetching */
@@ -182,5 +187,27 @@ export interface ThreadsAuthResponse {
         isVerified: boolean;
     };
     error?: string;
+}
+
+// ============================================
+// Solana Types (NEW)
+// ============================================
+
+export type SolanaCluster = {
+    name: "mainnet-beta" | "testnet" | "devnet";
+    rpcUrl: string;
+};
+
+export interface KiroroSolanaContextType {
+    /** Connect a Solana wallet */
+    connect: () => void;
+    /** Sign a message with the connected Solana wallet */
+    signMessage: (message: string) => Promise<Uint8Array>;
+    /** Send a transaction */
+    sendTransaction: (transaction: any, connection: any) => Promise<string>;
+    /** The connected wallet address */
+    walletAddress: string | null;
+    /** Whether a wallet is connected */
+    isConnected: boolean;
 }
 
