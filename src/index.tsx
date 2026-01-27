@@ -283,6 +283,7 @@ function PrivyWrapper({ children, config }: { children: React.ReactNode; config:
                 appearance: {
                     theme,
                     logo: config.appearance?.logo,
+                    walletChainType: 'ethereum-and-solana',
                 },
                 embeddedWallets: {
                     createOnLogin: "users-without-wallets",
